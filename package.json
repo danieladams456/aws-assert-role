@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/danieladams456/aws-js-signer/issues"
   },
-  "homepage": "https://github.com/danieladams456/aws-js-signer#readme"
+  "homepage": "https://github.com/danieladams456/aws-js-signer#readme",
+  "dependencies": {
+    "@aws-sdk/client-sts": "^3.2.0"
+  }
 }
