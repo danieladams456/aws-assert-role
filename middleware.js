@@ -1,3 +1,4 @@
+const fs = require("fs");
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts");
 const { awsAuthMiddlewareOptions } = require("@aws-sdk/middleware-signing");
 
@@ -28,7 +29,20 @@ async function getCallerIdentitySignedRequest() {
   }
 }
 
+const storeData = (data, path) => {
+  try {
+    fs.writeFileSync(path, JSON.stringify(data));
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 (async () => {
   const signedRequest = await getCallerIdentitySignedRequest();
-  console.log(signedRequest);
+  const transformed = {
+    url: `https://${signedRequest.hostname}`,
+    headers: signedRequest.headers,
+    body: signedRequest.body,
+  };
+  storeData(transformed, "request.json");
 })();
