@@ -2,15 +2,6 @@ import { HttpRequest } from "@aws-sdk/protocol-http";
 import { Sha256 } from "@aws-crypto/sha256-js";
 const { SignatureV4 } = require("@aws-sdk/signature-v4");
 
-// const minimalRequest = new HttpRequest({
-//   method: "POST",
-//   protocol: "https:",
-//   path: "/",
-//   headers: {
-//     host: "foo.us-bar-1.amazonaws.com",
-//   },
-//   hostname: "foo.us-bar-1.amazonaws.com",
-// });
 const minimalRequest = new HttpRequest({
   method: "POST",
   protocol: "https:",

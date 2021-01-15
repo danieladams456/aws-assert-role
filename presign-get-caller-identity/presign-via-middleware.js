@@ -44,5 +44,5 @@ const storeData = (data, path) => {
     headers: signedRequest.headers,
     body: signedRequest.body,
   };
-  storeData(transformed, "request.json");
+  storeData(transformed, "../request.json");
 })();

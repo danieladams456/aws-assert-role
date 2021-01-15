@@ -5,7 +5,7 @@ import requests
 
 
 def main():
-    with open('request.json') as infile:
+    with open('../request.json') as infile:
         presigned = json.load(infile)
 
     # send presigned request
