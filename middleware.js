@@ -1,12 +1,12 @@
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts");
 const { awsAuthMiddlewareOptions } = require("@aws-sdk/middleware-signing");
 
+const ERROR_CODE = "SIGNING_COMPLETED_ABORTING";
+
 const logMiddleware = (next, context) => async (args) => {
-  console.log(args.request);
-  args.request.headers["x-amz-meta-foo"] = "bar";
-  const result = next(args);
-  // result.response contains data returned from next middleware.
-  return result;
+  const err = new Error(ERROR_CODE);
+  err.request = args.request;
+  throw err;
 };
 
 const client = new STSClient({ region: "us-east-1" });
@@ -15,13 +15,20 @@ client.middlewareStack.addRelativeTo(logMiddleware, {
   toMiddleware: awsAuthMiddlewareOptions.name,
 });
 
-async function getCallerIdentity() {
-  const command = new GetCallerIdentityCommand({});
+async function getCallerIdentitySignedRequest() {
+  const command = new GetCallerIdentityCommand();
   try {
     const results = await client.send(command);
-    console.log(results.Arn);
   } catch (err) {
-    console.error(err);
+    if (err.message == ERROR_CODE) {
+      return err.request;
+    } else {
+      throw err;
+    }
   }
 }
-getCallerIdentity();
+
+(async () => {
+  const signedRequest = await getCallerIdentitySignedRequest();
+  console.log(signedRequest);
+})();
