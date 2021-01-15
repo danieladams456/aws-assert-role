@@ -105,3 +105,6 @@ dist
 
 request.json
 *ipynb*
+
+.terraform
+/terraform/init.sh
