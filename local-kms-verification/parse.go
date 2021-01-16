@@ -1,6 +1,7 @@
 package localkmsverifier
 
 import (
+	"errors"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -12,5 +13,13 @@ func parsePublicKey(base64PubKey string) (*rsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return x509.ParsePKCS1PublicKey(pubKeyBytes)
+	pubKey, err:=x509.ParsePKIXPublicKey(pubKeyBytes)
+	if err != nil{
+		return nil, err
+	} 
+	rsaPubKey, ok := pubKey.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.New("could not cast to *rsa.PublicKey")
+	}
+	return rsaPubKey, nil
 }
