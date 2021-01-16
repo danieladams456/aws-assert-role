@@ -1,4 +1,4 @@
-package localkmsverifier
+package main
 
 import (
 	"errors"
