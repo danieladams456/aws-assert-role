@@ -1,5 +1,13 @@
-[packages/signature-v4/src/SignatureV4.ts](https://github.com/aws/aws-sdk-js-v3/blob/master/packages/signature-v4/src/SignatureV4.ts) is what does the signing
+# Local Decryption
 
-gets called in the middleware [here](https://github.com/aws/aws-sdk-js-v3/blob/master/packages/middleware-signing/src/middleware.ts)
+- input: `testmessage`
+- algorithm: `RSASSA_PKCS1_V1_5_SHA_512`
+- public key: `MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAo009XAA3N0XFKrrWda1gTc0ehoXmxWsL6/THCTMKWZt82uENiYXoSVoekjd7WYb5Er5oN59W36YEL65hH402I0Frw5YEDsM0epum9eJgyuZ/2bmH/DA7ncwpRXggkOfzoqjXzubCqQYVnsb9ErDzgBPlug3LjyL8ju/Oe/P9dFIXie/egdRYr3QXbRYMl3UuebtdMNbRdFaCkv8IMeYGPvrrDXE78w4o6dvsnnBDr7aHMTprCt4Yzttbigg69OpmjA4qBz4+33YHXKNtNcUb9CuVlBla2ZZkfU7BQ4TEi/87kAorXuUZDnV1atUBiwwlTxlQeZhcVrM5sFtjKDsJGij6rxvyTrsXTjSH/UhCHr4e2tbDutVdvuG+NVjAWhlMHGJGbjphxwAbB7KX5JqSMpYsKFfp5QTHA4Hbiu5xaBSi8jzDanDfzufHXQvuf1cpkShxjSc2gyiYaflodjxiQ2OJr3MtzRxm977aOyJmytEuY7Zpya9lmwzAv/6uIrmAu+iFq5cje46kwES16dsGYI8v1YSSc9vIGAzhl27qNTjEnjmYPcyLeL5MiuGk+3eh4asRAZMvZ+vvIAnuhM9N3cCmK4Tn0L6vAwmosQrOf3H11QxXD3KQGP8sJXAxxTJ7pb4GKYITZW2sJ3Jaifi/04MBtm0n4N8xCGUxO4tiXDkCAwEAAQ==`
+- signature: `WCw/zVvnwKv5WXFWY7/HGVatOpMsOakw53yi+9a32G+ogSM7JgaG046JiOVVI/F0svCcGEmJ38FI1+/7QsJpyShP1nGBaen/Ydov+ddG3ISGU53zhM1Gq5i6pBiXSjTYecTQpOLE27zoS967CglS1XMmg+mHnigis25rksMcJwbuvP9PZ0wMv7YUjEth4FAA49YPNBw9To7vyLPZpAwDndZ/PUFSJhA5CMruWN1HvnRXlBkOC7LN4FZfUJ0UpxisycKEcJf6LcvqTstzovKmo+84Zp6ArQ3ODBcIBaSpF5Rbwo1nDUGTTgHF8XYRVy9uCEMSS4z/jSjaiUtLgzEE5AcetTEMl5ZWPd71MReiI0lEfDBC1gKek+7oFEfcq54Fmf0jdzgeKCxiTSegIbd4gNqYvAks+JWJzEhTHTZWbE0HHZ5QWAjus9V/gRbrBegOuVdXRSY1O7XAlqhIJdSd/RG4147t3a9c8oWW71/CILIFbIT7ZuaBGCsfD1q71maaz5rhe3TH5OGh58WWfgas3lxnoxyQ2P1s7MjhSCanVM5+H4XDfsFbP3zPHQnsAhczFNnDctUfGkO4SRnNrh4Tj6L7jIin8ERXLPSMzHg6x+8gQXzRy0KnHJfaHQNc1W4zctXh7Bqr8M0h02ErBaD6WkCv6oPl7+aPNYs3ohOrg0Q=`
 
-alternative is `aws4` package
+# STS request signing options
+
+- JavaScript
+  - via [internal packages](./presign-get-caller-identity/presign-via-sigv4.js)
+  - via [middleware](./presign-get-caller-identity/presign-via-middleware.js) (publicly supported interface)
+  - via custom package [aws4](https://www.npmjs.com/package/aws4)
