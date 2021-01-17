@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+import base64
 import time
 import xml.etree.ElementTree as ET
 import json
 import requests
 import boto3
 import ssl
-import base64
+import jwt
 
 kms = boto3.client('kms')
 KEY_ID = 'alias/identity-assertion-signing'
@@ -80,8 +81,11 @@ def main():
     signature = base64.urlsafe_b64encode(sign_res['Signature']).strip(b'=')
     print(f'\nsignature for local verification\n{signature.decode()}')
 
-    jwt = message + b'.' + signature
-    print(f'\nfull JWT\n{jwt.decode()}')
+    signed_jwt = message + b'.' + signature
+    print(f'\nsigned JWT\n{signed_jwt.decode()}')
+
+    decoded_jwt = jwt.decode(signed_jwt, pem_public_key, algorithms=["RS256"])
+    print(f'\nverified and decoded JWT\n{json.dumps(decoded_jwt, indent=2)}')
 
 
 if __name__ == '__main__':
