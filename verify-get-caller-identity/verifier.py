@@ -3,7 +3,8 @@ import xml.etree.ElementTree as ET
 import json
 import requests
 import boto3
-from base64 import b64encode
+import ssl
+import base64
 
 kms = boto3.client('kms')
 KEY_ID = 'alias/identity-assertion-signing'
@@ -22,15 +23,16 @@ def main():
 
     # parse result for role session arn
     root = ET.fromstring(res.text)
-    arn = root.find(
-        './{https://sts.amazonaws.com/doc/2011-06-15/}GetCallerIdentityResult/{https://sts.amazonaws.com/doc/2011-06-15/}Arn').text
+    ARN_XPATH = './{https://sts.amazonaws.com/doc/2011-06-15/}GetCallerIdentityResult/{https://sts.amazonaws.com/doc/2011-06-15/}Arn'
+    arn = root.find(ARN_XPATH).text
     print('role session arn')
     print(arn)
 
     # pull public key for informational reasons
-    public_key = kms.get_public_key(KeyId=KEY_ID)['PublicKey']
-    print('\npublic key')
-    print(b64encode(public_key).decode())
+    der_public_key = kms.get_public_key(KeyId=KEY_ID)['PublicKey']
+    pem_public_key = ssl.DER_cert_to_PEM_cert(
+        der_public_key).replace('CERTIFICATE', 'PUBLIC KEY')
+    print(f'\npublic key\n{pem_public_key}')
 
     # sign by sending full bytes object to KMS
     sign_res = kms.sign(
@@ -38,9 +40,8 @@ def main():
         SigningAlgorithm=SIGNING_ALGORITHM,
         Message=arn.encode(),
     )
-    signature = sign_res['Signature']
-    print('\nsignature')
-    print(b64encode(signature).decode())
+    signature = base64.urlsafe_b64encode(sign_res['Signature']).decode()
+    print(f'\nsignature\n{signature}')
 
     # verify
     verify_res = kms.verify(
