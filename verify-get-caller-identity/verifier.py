@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import time
 import xml.etree.ElementTree as ET
 import json
 import requests
@@ -8,7 +9,12 @@ import base64
 
 kms = boto3.client('kms')
 KEY_ID = 'alias/identity-assertion-signing'
-SIGNING_ALGORITHM = 'RSASSA_PKCS1_V1_5_SHA_512'
+SIGNING_ALGORITHM = 'RSASSA_PKCS1_V1_5_SHA_256'
+JWT_VALID_DURATION = 3600
+
+
+def jwt_serialize_part(part_dict):
+    return base64.urlsafe_b64encode(json.dumps(part_dict).encode()).strip(b'=')
 
 
 def main():
@@ -29,28 +35,53 @@ def main():
     print(arn)
 
     # pull public key for informational reasons
-    der_public_key = kms.get_public_key(KeyId=KEY_ID)['PublicKey']
+    pubkey_res = kms.get_public_key(KeyId=KEY_ID)
+    kid = pubkey_res['KeyId'].split('key/')[1]  # actual guid, not alias
+    der_public_key = pubkey_res['PublicKey']
     pem_public_key = ssl.DER_cert_to_PEM_cert(
         der_public_key).replace('CERTIFICATE', 'PUBLIC KEY')
     print(f'\npublic key\n{pem_public_key}')
+
+    # construct JWT object for KMS to sign
+    header_dict = {
+        'typ': 'JWT',
+        'alg': 'RS256',
+        'kid': kid
+    }
+    header = jwt_serialize_part(header_dict)
+
+    current_time = int(time.time())
+    body_dict = {
+        'iat': current_time,
+        'exp': current_time + JWT_VALID_DURATION,
+        'arn': arn,
+    }
+    body = jwt_serialize_part(body_dict)
+    message = header + b'.' + body
+    print(f'jwt header + body to be signed\n{message.decode()}')
 
     # sign by sending full bytes object to KMS
     sign_res = kms.sign(
         KeyId=KEY_ID,
         SigningAlgorithm=SIGNING_ALGORITHM,
-        Message=arn.encode(),
+        Message=message,
     )
-    signature = base64.urlsafe_b64encode(sign_res['Signature']).decode()
-    print(f'\nsignature\n{signature}')
 
     # verify
     verify_res = kms.verify(
         KeyId=KEY_ID,
         SigningAlgorithm=SIGNING_ALGORITHM,
-        Message=arn.encode(),
+        Message=message,
         Signature=sign_res['Signature'],
     )
-    print('\nsignature valid:', verify_res['SignatureValid'])
+    print('\nsignature valid via KMS API call:', verify_res['SignatureValid'])
+
+    # verify locally using JWT library
+    signature = base64.urlsafe_b64encode(sign_res['Signature']).strip(b'=')
+    print(f'\nsignature for local verification\n{signature.decode()}')
+
+    jwt = message + b'.' + signature
+    print(f'\nfull JWT\n{jwt.decode()}')
 
 
 if __name__ == '__main__':
