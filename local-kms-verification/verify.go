@@ -1,4 +1,4 @@
-package kmsverifier
+package main
 
 import (
 	"crypto"
