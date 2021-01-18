@@ -1,15 +1,22 @@
-Idea inspired by: https://docs.cyberark.com/Product-Doc/OnlineHelp/AAM-DAP/Latest/en/Content/Operations/Services/AWS_IAM_Authenticator.htm
+# AWS Assert Role
 
-# Local Decryption
+## Problem
 
-- input: `testmessage`
-- algorithm: `RSASSA_PKCS1_V1_5_SHA_512`
-- public key: `MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAo009XAA3N0XFKrrWda1gTc0ehoXmxWsL6/THCTMKWZt82uENiYXoSVoekjd7WYb5Er5oN59W36YEL65hH402I0Frw5YEDsM0epum9eJgyuZ/2bmH/DA7ncwpRXggkOfzoqjXzubCqQYVnsb9ErDzgBPlug3LjyL8ju/Oe/P9dFIXie/egdRYr3QXbRYMl3UuebtdMNbRdFaCkv8IMeYGPvrrDXE78w4o6dvsnnBDr7aHMTprCt4Yzttbigg69OpmjA4qBz4+33YHXKNtNcUb9CuVlBla2ZZkfU7BQ4TEi/87kAorXuUZDnV1atUBiwwlTxlQeZhcVrM5sFtjKDsJGij6rxvyTrsXTjSH/UhCHr4e2tbDutVdvuG+NVjAWhlMHGJGbjphxwAbB7KX5JqSMpYsKFfp5QTHA4Hbiu5xaBSi8jzDanDfzufHXQvuf1cpkShxjSc2gyiYaflodjxiQ2OJr3MtzRxm977aOyJmytEuY7Zpya9lmwzAv/6uIrmAu+iFq5cje46kwES16dsGYI8v1YSSc9vIGAzhl27qNTjEnjmYPcyLeL5MiuGk+3eh4asRAZMvZ+vvIAnuhM9N3cCmK4Tn0L6vAwmosQrOf3H11QxXD3KQGP8sJXAxxTJ7pb4GKYITZW2sJ3Jaifi/04MBtm0n4N8xCGUxO4tiXDkCAwEAAQ==`
-- signature: `WCw/zVvnwKv5WXFWY7/HGVatOpMsOakw53yi+9a32G+ogSM7JgaG046JiOVVI/F0svCcGEmJ38FI1+/7QsJpyShP1nGBaen/Ydov+ddG3ISGU53zhM1Gq5i6pBiXSjTYecTQpOLE27zoS967CglS1XMmg+mHnigis25rksMcJwbuvP9PZ0wMv7YUjEth4FAA49YPNBw9To7vyLPZpAwDndZ/PUFSJhA5CMruWN1HvnRXlBkOC7LN4FZfUJ0UpxisycKEcJf6LcvqTstzovKmo+84Zp6ArQ3ODBcIBaSpF5Rbwo1nDUGTTgHF8XYRVy9uCEMSS4z/jSjaiUtLgzEE5AcetTEMl5ZWPd71MReiI0lEfDBC1gKek+7oFEfcq54Fmf0jdzgeKCxiTSegIbd4gNqYvAks+JWJzEhTHTZWbE0HHZ5QWAjus9V/gRbrBegOuVdXRSY1O7XAlqhIJdSd/RG4147t3a9c8oWW71/CILIFbIT7ZuaBGCsfD1q71maaz5rhe3TH5OGh58WWfgas3lxnoxyQ2P1s7MjhSCanVM5+H4XDfsFbP3zPHQnsAhczFNnDctUfGkO4SRnNrh4Tj6L7jIin8ERXLPSMzHg6x+8gQXzRy0KnHJfaHQNc1W4zctXh7Bqr8M0h02ErBaD6WkCv6oPl7+aPNYs3ohOrg0Q=`
-- Signature verification working in Go
-  - Try to sign according to [JWS spec](https://tools.ietf.org/html/rfc7515) ([npm package example](https://www.npmjs.com/package/jws))
+We would like a way to do AWS native, secure service-to-service authentication with credential rotation. Bootstrapping trust from within a system is hard to do without letting administrators access secrets they shouldn't be allowed to. AWS provides [IAM roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) which solve this problem for access to AWS resources and specific applications integrated with [API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html), but we would like to be able to have a similar capability with any application. Unfortunately AWS does not include the role assertions on the signed [instance identity document](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) for EC2 or [task metadata](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html) or [credentials](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html) endpoints for ECS.
 
-# STS request signing options
+## Solution
+
+This idea was inspired by CyberArk DAP [IAM Authenticator integration](https://docs.cyberark.com/Product-Doc/OnlineHelp/AAM-DAP/Latest/en/Content/Operations/Services/AWS_IAM_Authenticator.htm). The client will pre-sign an STS [`GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) request, which can then be executed by a trusted entity. Handing over this signature will not compromise the security of the IAM role secret keys. The trusted entity will get a response directly from AWS STS, which can be trusted. We then know the caller has that specific role session. This could be done on every app request, but making a network call every time is slow and susceptible to throttling. We instead sign that assertion with [KMS asymmetric keys](https://aws.amazon.com/blogs/security/digital-signing-asymmetric-keys-aws-kms/). The `RSASSA_PKCS1_V1_5_SHA_256` algorithm supported by KMS is the same one used for `RS256` signed JWTs. By constructing the appropriate JWT header and body, this allows us to issue industry standard tokens which can be verified by client libraries across many languages.
+
+This design prevents administrators from seeing application tokens. The only ways for them to get tokens is to edit the IAM [role trust policy](https://aws.amazon.com/blogs/security/how-to-use-trust-policies-with-iam-roles/) or to get on the host itself and pull role credentials. Both of these would compromise the IAM role system as a whole, so we maintain the same security posture as access to AWS resources. Below is an example of an admin user being denied an assume role request where the trust policy principal is only `ecs-tasks.amazonaws.com`.
+
+> An error occurred (AccessDenied) when calling the AssumeRole operation: User: arn:aws:sts::123456789012:assumed-role/SOURCE_ROLE_NAME/SESSION_NAME is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::123456789012:role/TARGET_ROLE_NAME
+
+## Sequence Diagram
+
+![role assertion sequence diagram](./docs/aws-assert-role.png)
+
+## STS request signing options
 
 - JavaScript
   - via [internal packages](./presign-get-caller-identity/presign-via-sigv4.js)
