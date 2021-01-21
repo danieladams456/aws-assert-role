@@ -1,9 +1,11 @@
-package main
+package verifier_test
 
 import (
 	"errors"
 	"os"
 	"testing"
+
+	"github.com/danieladams456/kmsverifier/verifier"
 )
 
 func Test_verifyJWT(t *testing.T) {
@@ -11,7 +13,11 @@ func Test_verifyJWT(t *testing.T) {
 	if !ok {
 		t.Error(errors.New("must provide token in ROLE_ASSERTION env var"))
 	}
-	_, err := verifyJWT(token)
+
+	verifier := verifier.Verifier{}
+	verifier.LoadPubKeys()
+
+	_, err := verifier.VerifyJWT(token)
 	if err != nil {
 		t.Error(err)
 	}
