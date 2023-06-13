@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/danieladams456/aws-js-signer#readme",
   "dependencies": {
-    "@aws-sdk/client-sts": "^3.2.0"
+    "@aws-sdk/client-sts": "^3.350.0"
   }
 }
